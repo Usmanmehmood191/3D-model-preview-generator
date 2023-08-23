@@ -17,10 +17,10 @@ generate_preview_worker.onmessage = (evt: MessageEvent<WorkerResponse>) => {
   if (status === "completed") {
     feedback.innerText = "";
     preview.src = evt.data.url;
-    const a = document.createElement("a");
-    a.href = evt.data.url;
-    a.download = "model_preview";
-    a.click();
+    // const a = document.createElement("a");
+    // a.href = evt.data.url;
+    // a.download = "model_preview";
+    // a.click();
   }
 
   if (status === "pending") {

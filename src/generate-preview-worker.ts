@@ -20,16 +20,23 @@ self.onmessage = async (evt: MessageEvent<Data>) => {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#3a3a3a00");
-  const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-  camera.position.z = 1;
+
+  // Add lighting
+  const ambientLight = new THREE.AmbientLight(0xffffff, 3);
+  scene.add(ambientLight);
+
+  const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
+  camera.position.z = 2;
 
   const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(model_url, (e) => {
     const progress = (e.loaded / e.total) * 100;
     self.postMessage({ status: "pending", progress });
   });
-  gltf.scene.rotateX(0.5);
   scene.add(gltf.scene);
+
+  // Fit camera to object's bounding box
+  fitCameraToObject(camera, gltf.scene);
 
   const renderer = new THREE.WebGLRenderer({ canvas });
   renderer.render(scene, camera);
@@ -39,3 +46,27 @@ self.onmessage = async (evt: MessageEvent<Data>) => {
   renderer.dispose();
   self.postMessage({ status: "completed", url: preview_url });
 };
+function fitCameraToObject(camera:THREE.PerspectiveCamera, object:THREE.Group, offset = 1.0) {
+  const boundingBox = new THREE.Box3().setFromObject(object);
+  const center = boundingBox.getCenter(new THREE.Vector3());
+  const size = boundingBox.getSize(new THREE.Vector3());
+
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const fov = camera.fov * (Math.PI / 180);
+  let distance = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * offset;
+
+  const direction = camera.position.clone().sub(center).normalize();
+  const newCameraPos = direction.multiplyScalar(distance).add(center);
+
+  camera.position.copy(newCameraPos);
+  camera.position.copy( camera.position.clone().add(new THREE.Vector3(distance/3, distance/3, 0)));
+  camera.lookAt(center);
+   // Calculate rotation to face camera
+   const cameraPosition = new THREE.Vector3();
+   camera.getWorldPosition(cameraPosition);
+   cameraPosition.y = 0;
+   cameraPosition.x = -1;
+   cameraPosition.z = 0;
+
+   object.lookAt(cameraPosition);
+}
